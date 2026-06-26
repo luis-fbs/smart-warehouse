@@ -1,0 +1,6 @@
+.idea/
+out/
+target/
+LICENSE
+pom.xml
+smart-warehouse.iml

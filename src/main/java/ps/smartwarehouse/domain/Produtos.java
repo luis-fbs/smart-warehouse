@@ -5,14 +5,22 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Produtos implements Iterable<Produto> {
-    public List<Produto> produtos;
+    private List<Produto> produtos;
 
-    public  Produtos() {
-        this.produtos = new ArrayList<Produto>();
+    public Produtos() {
+        this.produtos = new ArrayList<>();
+    }
+
+    public List<Produto> getProdutos() {
+        return produtos;
+    }
+
+    public void adicionar(Produto produto) {
+        produtos.add(produto);
     }
 
     @Override
-    public Iterator iterator() {
+    public Iterator<Produto> iterator() {
         return new Iterator<Produto>() {
             int index = 0;
 
