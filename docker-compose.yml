@@ -1,0 +1,6 @@
+services:
+  smartwarehouse:
+    build: .
+    container_name: smartwarehouse
+    ports:
+      - "8080:8080"
