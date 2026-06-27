@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartWarehouse</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --accent:#38bdf8; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --txt:#e2e8f0; --muted:#94a3b8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--txt); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .gh-link { display:inline-flex; align-items:center; gap:8px; color:var(--txt); text-decoration:none; font-size:13px; font-weight:600; border:1px solid var(--line); padding:7px 12px; border-radius:8px; }
+  .gh-link:hover { border-color:var(--accent); color:var(--accent); }
+  .gh-link svg { fill:currentColor; }
+  header h1 { margin:0; font-size:20px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:16px; padding:16px 24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { margin:0 0 4px; font-size:15px; color:var(--accent); }
+  .card .tag { font-size:11px; color:var(--muted); margin-bottom:12px; }
+  button { background:var(--accent); color:#06283d; border:0; padding:8px 12px; border-radius:6px; font-weight:600; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  button:hover { opacity:.9; }
+  select, input { background:#0b1220; color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:7px; }
+  label { font-size:12px; color:var(--muted); display:block; margin:8px 0 3px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
+  th,td { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:end; }
+  .pill { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .NORMAL,.ALOCADO,.OPERANDO { background:rgba(34,197,94,.15); color:var(--ok); }
+  .ALERTA,.REJEITADO,.EVACUANDO { background:rgba(239,68,68,.15); color:var(--bad); }
+  .blocked { color:var(--bad); font-weight:600; }
+  #log { background:#06090f; border:1px solid var(--line); border-radius:8px; padding:10px; height:200px; overflow:auto; font-family:ui-monospace,monospace; font-size:11px; line-height:1.5; }
+  .full { grid-column:1/-1; }
+  .lote-item { font-size:12px; background:#0b1220; border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:3px 0; display:flex; justify-content:space-between; }
+  small.hint { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>SmartWarehouse</h1>
+  <a class="gh-link" href="https://github.com/luis-fbs/smart-warehouse/" target="_blank" rel="noopener noreferrer">
+    <svg height="18" width="18" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+    </svg>
+    GitHub
+  </a>
+</header>
+
+<div class="grid">
+  <div class="card full">
+    <h2>Mapa do Galpão</h2>
+    <table id="mapa"></table>
+  </div>
+
+  <div class="card">
+    <h2>Auditoria</h2>
+    <button onclick="auditar()">Executar auditoria</button>
+    <table id="auditoria"></table>
+  </div>
+
+  <div class="card">
+    <h2>Alocação</h2>
+    <label>Estratégia</label>
+    <select id="estrategia"></select>
+    <label>Adicionar produto ao lote</label>
+    <div class="row">
+      <input id="pNome" placeholder="nome" style="flex:1" value="Produto">
+      <select id="pCat">
+        <option value="COMUM">COMUM</option>
+        <option value="PERECIVEL">PERECIVEL</option>
+        <option value="QUIMICO">QUIMICO</option>
+      </select>
+      <input id="pRisco" type="number" min="0" max="3" value="0" style="width:60px" title="risco">
+      <button class="ghost" onclick="addItem()">+ add</button>
+    </div>
+    <div id="lote"></div>
+    <div class="row" style="margin-top:8px">
+      <button onclick="enviarLote()">Enviar lote à doca</button>
+    </div>
+    <table id="relatorio"></table>
+  </div>
+
+  <div class="card">
+    <h2>Sensores</h2>
+    <table id="sensores"></table>
+    <div class="row" style="margin-top:10px">
+      <div><label>Sensor</label><select id="sensorSel"></select></div>
+      <div><label>Valor lido</label><input id="sensorVal" type="number" step="0.1" style="width:90px" value="50"></div>
+      <button onclick="lerSensor()">Registrar leitura</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Robôs</h2>
+    <table id="robos"></table>
+  </div>
+
+  <div class="card full">
+    <h2>Console de Eventos</h2>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+const lote = [];
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+const post = (url, body) => api(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+
+function table(el, rows, cols) {
+  if (!rows.length) { el.innerHTML = '<tr><td><small class="hint">— vazio —</small></td></tr>'; return; }
+  const head = '<tr>' + cols.map(c => `<th>${c.h}</th>`).join('') + '</tr>';
+  const body = rows.map(r => '<tr>' + cols.map(c => `<td>${c.f(r)}</td>`).join('') + '</tr>').join('');
+  el.innerHTML = head + body;
+}
+const pill = v => `<span class="pill ${v}">${v}</span>`;
+
+async function carregarMapa() {
+  const m = await api('/api/inventario/mapa');
+  table(document.getElementById('mapa'), m, [
+    {h:'Zona', f:r=>r.zona},
+    {h:'Status', f:r=> r.bloqueada ? '<span class="blocked">BLOQUEADA</span>' + ` <button class="ghost" style="padding:2px 6px" onclick="desbloquear('${r.zona}')">desbloquear</button>` : 'livre'},
+    {h:'Dist. doca', f:r=>r.distanciaDoca},
+    {h:'Produtos', f:r=>r.produtosArmazenados},
+    {h:'Slots', f:r=>r.slots},
+    {h:'Sensores', f:r=>r.sensores.join(', ')},
+  ]);
+}
+
+async function auditar() {
+  const a = await api('/api/inventario/auditoria');
+  table(document.getElementById('auditoria'), a, [
+    {h:'#', f:r=>r.ordem},
+    {h:'Produto', f:r=>r.nome},
+    {h:'Categoria', f:r=>r.categoria},
+    {h:'Validade', f:r=>r.validade},
+    {h:'Risco', f:r=>r.risco},
+  ]);
+  carregarLog();
+}
+
+function renderLote() {
+  document.getElementById('lote').innerHTML = lote.map((p,i) =>
+    `<div class="lote-item"><span>${p.nome} · ${p.categoria} · risco ${p.risco}</span><span style="cursor:pointer" onclick="rmItem(${i})">x</span></div>`).join('');
+}
+function addItem() {
+  lote.push({
+    nome: document.getElementById('pNome').value || 'Item',
+    categoria: document.getElementById('pCat').value,
+    risco: parseInt(document.getElementById('pRisco').value) || 0,
+    indiceSaida: 0.8, validadeDias: 30
+  });
+  renderLote();
+}
+function rmItem(i){ lote.splice(i,1); renderLote(); }
+
+async function enviarLote() {
+  if (!lote.length) { alert('Adicione produtos ao lote.'); return; }
+  const rel = await post('/api/operacoes/recebimento', {estrategia: document.getElementById('estrategia').value, produtos: lote});
+  table(document.getElementById('relatorio'), rel, [
+    {h:'Produto', f:r=>r.produto},
+    {h:'Status', f:r=>pill(r.status)},
+    {h:'Destino', f:r=>r.destino},
+  ]);
+  lote.length = 0; renderLote();
+  await refresh();
+}
+
+async function carregarSensores() {
+  const s = await api('/api/inventario/sensores');
+  table(document.getElementById('sensores'), s, [
+    {h:'Zona', f:r=>r.zona},
+    {h:'Tipo', f:r=>r.tipo},
+    {h:'Limites', f:r=>`${r.limiteMin}..${r.limiteMax}`},
+    {h:'Leitura', f:r=>r.leitura},
+    {h:'Estado', f:r=>pill(r.estado)},
+  ]);
+  const sel = document.getElementById('sensorSel');
+  sel.innerHTML = s.map(x => `<option value="${x.zona}|${x.tipo}">Zona ${x.zona} · ${x.tipo}</option>`).join('');
+}
+
+async function lerSensor() {
+  const [zona, tipo] = document.getElementById('sensorSel').value.split('|');
+  await post('/api/inventario/sensores/leitura', {zona, tipo, valor: parseFloat(document.getElementById('sensorVal').value)});
+  await refresh();
+}
+
+async function desbloquear(zona) {
+  await post(`/api/inventario/zonas/${zona}/desbloquear`);
+  await refresh();
+}
+
+async function carregarRobos() {
+  const r = await api('/api/operacoes/robos');
+  table(document.getElementById('robos'), r, [
+    {h:'Robô', f:x=>x.id},
+    {h:'Zona', f:x=>x.zona},
+    {h:'Estado', f:x=>pill(x.estado)},
+  ]);
+}
+
+async function carregarLog() {
+  const l = await api('/api/eventos');
+  document.getElementById('log').innerHTML = l.map(x => `<div>${x}</div>`).join('');
+}
+
+async function refresh() {
+  await Promise.all([carregarMapa(), carregarSensores(), carregarRobos(), carregarLog()]);
+}
+
+async function init() {
+  const est = await api('/api/operacoes/estrategias');
+  document.getElementById('estrategia').innerHTML = est.map(e => `<option>${e}</option>`).join('');
+  renderLote();
+  await refresh();
+}
+init();
+</script>
+</body>
+</html>
